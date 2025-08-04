@@ -1,6 +1,8 @@
 -- TWEEN TO BASE FIXED BY WALVY v2 FINAL
 -- WALVY COMMUNITY - STEAL A BRAINROT
 
+return function()
+
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
