@@ -1,81 +1,57 @@
+-- TWEEN TO BASE FIXED BY WALVY v2 FINAL
+-- WALVY COMMUNITY - STEAL A BRAINROT
+
+-- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local PathfindingService = game:GetService("PathfindingService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
+-- Player setup
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
--- GUI
-local guiName = "TweenToBaseGUI_Walvy"
-local oldGui = CoreGui:FindFirstChild(guiName)
-if oldGui then oldGui:Destroy() end
-
-local gui = Instance.new("ScreenGui", CoreGui)
-gui.Name = guiName
-gui.ResetOnSpawn = false
-
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 200, 0, 100)
-frame.Position = UDim2.new(0, 300, 0, 200)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-
-local toggleBtn = Instance.new("TextButton", frame)
-toggleBtn.Size = UDim2.new(1, 0, 0, 40)
-toggleBtn.Position = UDim2.new(0, 0, 0, 0)
-toggleBtn.Text = "Start Tween"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 16
-
-local status = Instance.new("TextLabel", frame)
-status.Size = UDim2.new(1, 0, 0, 30)
-status.Position = UDim2.new(0, 0, 0, 45)
-status.Text = "Status: Idle"
-status.BackgroundTransparency = 1
-status.TextColor3 = Color3.new(1, 1, 1)
-status.Font = Enum.Font.Gotham
-status.TextSize = 14
-
--- Setup
-local float = Instance.new("BodyVelocity")
-float.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-float.Velocity = Vector3.new(0, 0, 0)
-
+-- Fungsi untuk membeli item berdasarkan itemID -- ADDED
 local function buyItem(itemID)
     pcall(function()
-        game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-        :WaitForChild("Net"):WaitForChild("RF/CoinsShopService/RequestBuy"):InvokeServer(itemID)
+        game:GetService("ReplicatedStorage")
+            :WaitForChild("Packages")
+            :WaitForChild("Net")
+            :WaitForChild("RF/CoinsShopService/RequestBuy")
+            :InvokeServer(itemID)
     end)
 end
 
+-- Fungsi toggle equip/unequip Speed Coil -- ADDED
 local function toggleSpeedCoilEquip()
     local backpack = player:WaitForChild("Backpack")
-    local char = player.Character or player.CharacterAdded:Wait()
-    local equipped = char:FindFirstChild("Speed Coil")
+    local character = player.Character or player.CharacterAdded:Wait()
+    
+    local equipped = character:FindFirstChild("Speed Coil")
     if equipped then
         equipped.Parent = backpack
     else
         local coil = backpack:FindFirstChild("Speed Coil")
         if coil then
-            coil.Parent = char
+            coil.Parent = character
         end
     end
 end
 
+-- Fungsi beli dan langsung equip Speed Coil -- ADDED
 local function buyAndEquipSpeedCoil()
     buyItem("Speed Coil")
-    task.wait(1)
+    task.wait(1) -- tunggu 2 detik biar item muncul di backpack
     toggleSpeedCoilEquip()
 end
 
+-- Panggil beli dan equip Speed Coil otomatis saat script jalan -- ADDED
+buyAndEquipSpeedCoil()
+
+-- Reconnect on respawn
 player.CharacterAdded:Connect(function(c)
 	character = c
 	hrp = c:WaitForChild("HumanoidRootPart")
@@ -108,10 +84,77 @@ local function applyAntiDeath(state)
 	end
 end
 
-local tweenSpeed = 80
+-- Floating
+local float = Instance.new("BodyVelocity")
+float.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+float.Velocity = Vector3.new(0, 0, 0)
+
+-- GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "WalvyWalkGui"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 240, 0, 130)
+frame.Position = UDim2.new(0.5, -120, 0.5, -65)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "WALVY COMMUNITY"
+title.Size = UDim2.new(1, 0, 0, 20)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+local button = Instance.new("TextButton", frame)
+button.Text = "▶ START TWEEN TO BASE"
+button.Size = UDim2.new(0.8, 0, 0, 40)
+button.Position = UDim2.new(0.1, 0, 0.25, 0)
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 16
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+
+local status = Instance.new("TextLabel", frame)
+status.Text = "Status: Idle"
+status.Size = UDim2.new(1, 0, 0, 30)
+status.Position = UDim2.new(0, 0, 0.7, 0)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.Font = Enum.Font.Gotham
+status.TextSize = 14
+
+-- Drag GUI
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	elseif input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+-- Core Logic
 local active = false
 local currentTween
 local walkThread
+local tweenSpeed = 80 -- kecepatan tween (semakin besar = lebih cepat)
 
 local function getBasePosition()
 	local plots = workspace:FindFirstChild("Plots")
@@ -140,61 +183,71 @@ local function walkToBase()
 	while active do
 		local target = getBasePosition()
 		if target then
+			status.Text = "📍 Calculating Path..."
 			local path = PathfindingService:CreatePath()
 			path:ComputeAsync(hrp.Position, target)
 
 			if path.Status == Enum.PathStatus.Success then
+				status.Text = "🧭 Following Path"
 				for _, wp in ipairs(path:GetWaypoints()) do
 					if not active then return end
 					tweenTo(wp.Position + Vector3.new(0, 6, 0))
 				end
 			else
+				status.Text = "⚠️ Path Failed, Direct Walk"
 				tweenTo(target + Vector3.new(0, 6, 0))
 			end
+
+			status.Text = "✅ Arrived"
 			task.wait(1.5)
 		else
+			status.Text = "❌ Base Not Found, retrying..."
 			task.wait(1)
 		end
 	end
 end
 
--- START / STOP FUNCTION
-local function toggleTween(state)
-	active = state
-	toggleBtn.Text = active and "Stop Tween" or "Start Tween"
-	status.Text = active and "Status: Running" or "Status: Idle"
-
-	if active then
-		buyAndEquipSpeedCoil()
+button.MouseButton1Click:Connect(function()
+	if not active then
+		active = true
 		applyAntiDeath(true)
 		humanoid.WalkSpeed = 0
 		float.Parent = hrp
-		walkThread = task.spawn(walkToBase)
+		status.Text = "Starting..."
+		button.Text = "■ STOP TWEEN TO BASE"
+		button.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+
+		walkThread = task.spawn(function()
+			while active do
+				walkToBase()
+				task.wait(1)
+			end
+		end)
 	else
+		active = false
 		if walkThread then task.cancel(walkThread) end
 		if currentTween then currentTween:Cancel() end
 		float.Parent = nil
 		applyAntiDeath(false)
 		humanoid.WalkSpeed = 16
+		status.Text = "Status: Idle"
+		button.Text = "▶ START TWEEN TO BASE"
+		button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	end
-end
-
--- BUTTON CLICK
-toggleBtn.MouseButton1Click:Connect(function()
-	toggleTween(not active)
 end)
 
--- SHORTCUT KEY
-UserInputService.InputBegan:Connect(function(input, gp)
-	if gp then return end
+-- Shortcut key 'T' untuk toggle tween to base (sesuai script kamu)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
 	if input.KeyCode == Enum.KeyCode.T then
-		toggleTween(not active)
-	elseif input.KeyCode == Enum.KeyCode.K then
+		button:Activate()
+	end
+end)
+
+-- Shortcut key 'K' untuk toggle equip/unequip Speed Coil -- ADDED
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.K then
 		toggleSpeedCoilEquip()
 	end
 end)
-
--- MAIN WINDUI TOGGLE CALLBACK
-return function(state)
-	toggleTween(state)
-end
