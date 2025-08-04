@@ -1,6 +1,13 @@
 -- TWEEN TO BASE FIXED BY WALVY v2 FINAL
 -- WALVY COMMUNITY - STEAL A BRAINROT
 
+(function()
+
+-- Cleanup jika sebelumnya sudah jalan
+if getgenv().TweenToBaseCleanup then
+    getgenv().TweenToBaseCleanup()
+end
+
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -14,7 +21,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
--- Fungsi untuk membeli item berdasarkan itemID -- ADDED
+-- Fungsi beli item
 local function buyItem(itemID)
     pcall(function()
         game:GetService("ReplicatedStorage")
@@ -25,72 +32,73 @@ local function buyItem(itemID)
     end)
 end
 
--- Fungsi toggle equip/unequip Speed Coil -- ADDED
+-- Fungsi toggle Speed Coil
 local function toggleSpeedCoilEquip()
     local backpack = player:WaitForChild("Backpack")
-    local character = player.Character or player.CharacterAdded:Wait()
-    
-    local equipped = character:FindFirstChild("Speed Coil")
+    local char = player.Character or player.CharacterAdded:Wait()
+    local equipped = char:FindFirstChild("Speed Coil")
     if equipped then
         equipped.Parent = backpack
     else
         local coil = backpack:FindFirstChild("Speed Coil")
         if coil then
-            coil.Parent = character
+            coil.Parent = char
         end
     end
 end
 
--- Fungsi beli dan langsung equip Speed Coil -- ADDED
+-- Beli dan equip Speed Coil
 local function buyAndEquipSpeedCoil()
     buyItem("Speed Coil")
-    task.wait(1) -- tunggu 2 detik biar item muncul di backpack
+    task.wait(1)
     toggleSpeedCoilEquip()
 end
 
--- Panggil beli dan equip Speed Coil otomatis saat script jalan -- ADDED
 buyAndEquipSpeedCoil()
 
--- Reconnect on respawn
+-- Respawn handler
 player.CharacterAdded:Connect(function(c)
-	character = c
-	hrp = c:WaitForChild("HumanoidRootPart")
-	humanoid = c:WaitForChild("Humanoid")
+    character = c
+    hrp = c:WaitForChild("HumanoidRootPart")
+    humanoid = c:WaitForChild("Humanoid")
 end)
 
 -- Anti Death
 local healthConn
 local function applyAntiDeath(state)
-	if humanoid then
-		for _, s in ipairs({
-			Enum.HumanoidStateType.FallingDown,
-			Enum.HumanoidStateType.Ragdoll,
-			Enum.HumanoidStateType.PlatformStanding,
-			Enum.HumanoidStateType.Seated
-		}) do
-			humanoid:SetStateEnabled(s, not not state)
-		end
-		if state then
-			humanoid.Health = humanoid.MaxHealth
-			if healthConn then healthConn:Disconnect() end
-			healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-				if humanoid.Health <= 0 then
-					humanoid.Health = humanoid.MaxHealth
-				end
-			end)
-		else
-			if healthConn then healthConn:Disconnect() end
-		end
-	end
+    if humanoid then
+        for _, s in ipairs({
+            Enum.HumanoidStateType.FallingDown,
+            Enum.HumanoidStateType.Ragdoll,
+            Enum.HumanoidStateType.PlatformStanding,
+            Enum.HumanoidStateType.Seated
+        }) do
+            humanoid:SetStateEnabled(s, not not state)
+        end
+        if state then
+            humanoid.Health = humanoid.MaxHealth
+            if healthConn then healthConn:Disconnect() end
+            healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                if humanoid.Health <= 0 then
+                    humanoid.Health = humanoid.MaxHealth
+                end
+            end)
+        else
+            if healthConn then healthConn:Disconnect() end
+        end
+    end
 end
 
--- Floating
+-- Float
 local float = Instance.new("BodyVelocity")
 float.MaxForce = Vector3.new(1e6, 1e6, 1e6)
 float.Velocity = Vector3.new(0, 0, 0)
 
--- GUI
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- GUI (cek dulu apakah sudah ada)
+local gui = player:WaitForChild("PlayerGui"):FindFirstChild("WalvyWalkGui")
+if gui then gui:Destroy() end
+
+gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "WalvyWalkGui"
 gui.ResetOnSpawn = false
 
@@ -129,136 +137,131 @@ status.TextColor3 = Color3.fromRGB(200, 200, 200)
 status.Font = Enum.Font.Gotham
 status.TextSize = 14
 
--- Drag GUI
+-- Drag
 local dragging, dragInput, dragStart, startPos
 frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then dragging = false end
-		end)
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
 end)
 UserInputService.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	elseif input.UserInputType == Enum.UserInputType.MouseMovement then
-		dragInput = input
-	end
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    elseif input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
 end)
 
--- Core Logic
+-- Logic
 local active = false
 local currentTween
 local walkThread
-local tweenSpeed = 80 -- kecepatan tween (semakin besar = lebih cepat)
+local tweenSpeed = 80
 
 local function getBasePosition()
-	local plots = workspace:FindFirstChild("Plots")
-	if not plots then return nil end
-	for _, plot in ipairs(plots:GetChildren()) do
-		local sign = plot:FindFirstChild("PlotSign")
-		local base = plot:FindFirstChild("DeliveryHitbox")
-		if sign and base and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled then
-			return base.Position
-		end
-	end
-	return nil
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        local base = plot:FindFirstChild("DeliveryHitbox")
+        if sign and base and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled then
+            return base.Position
+        end
+    end
+    return nil
 end
 
 local function tweenTo(pos)
-	if not hrp then return end
-	if currentTween then currentTween:Cancel() end
-	local dist = (hrp.Position - pos).Magnitude
-	local duration = dist / tweenSpeed
-	currentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
-	currentTween:Play()
-	currentTween.Completed:Wait()
+    if not hrp then return end
+    if currentTween then currentTween:Cancel() end
+    local dist = (hrp.Position - pos).Magnitude
+    local duration = dist / tweenSpeed
+    currentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
+    currentTween:Play()
+    currentTween.Completed:Wait()
 end
 
 local function walkToBase()
-	while active do
-		local target = getBasePosition()
-		if target then
-			status.Text = "📍 Calculating Path..."
-			local path = PathfindingService:CreatePath()
-			path:ComputeAsync(hrp.Position, target)
+    while active do
+        local target = getBasePosition()
+        if target then
+            status.Text = "📍 Calculating Path..."
+            local path = PathfindingService:CreatePath()
+            path:ComputeAsync(hrp.Position, target)
 
-			if path.Status == Enum.PathStatus.Success then
-				status.Text = "🧭 Following Path"
-				for _, wp in ipairs(path:GetWaypoints()) do
-					if not active then return end
-					tweenTo(wp.Position + Vector3.new(0, 6, 0))
-				end
-			else
-				status.Text = "⚠️ Path Failed, Direct Walk"
-				tweenTo(target + Vector3.new(0, 6, 0))
-			end
+            if path.Status == Enum.PathStatus.Success then
+                status.Text = "🧭 Following Path"
+                for _, wp in ipairs(path:GetWaypoints()) do
+                    if not active then return end
+                    tweenTo(wp.Position + Vector3.new(0, 6, 0))
+                end
+            else
+                status.Text = "⚠️ Path Failed, Direct Walk"
+                tweenTo(target + Vector3.new(0, 6, 0))
+            end
 
-			status.Text = "✅ Arrived"
-			task.wait(1.5)
-		else
-			status.Text = "❌ Base Not Found, retrying..."
-			task.wait(1)
-		end
-	end
+            status.Text = "✅ Arrived"
+            task.wait(1.5)
+        else
+            status.Text = "❌ Base Not Found, retrying..."
+            task.wait(1)
+        end
+    end
 end
 
 button.MouseButton1Click:Connect(function()
-	if not active then
-		active = true
-		applyAntiDeath(true)
-		humanoid.WalkSpeed = 0
-		float.Parent = hrp
-		status.Text = "Starting..."
-		button.Text = "■ STOP TWEEN TO BASE"
-		button.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-
-		walkThread = task.spawn(function()
-			while active do
-				walkToBase()
-				task.wait(1)
-			end
-		end)
-	else
-		active = false
-		if walkThread then task.cancel(walkThread) end
-		if currentTween then currentTween:Cancel() end
-		float.Parent = nil
-		applyAntiDeath(false)
-		humanoid.WalkSpeed = 16
-		status.Text = "Status: Idle"
-		button.Text = "▶ START TWEEN TO BASE"
-		button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	end
+    if not active then
+        active = true
+        applyAntiDeath(true)
+        humanoid.WalkSpeed = 0
+        float.Parent = hrp
+        status.Text = "Starting..."
+        button.Text = "■ STOP TWEEN TO BASE"
+        button.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+        walkThread = task.spawn(function()
+            while active do
+                walkToBase()
+                task.wait(1)
+            end
+        end)
+    else
+        active = false
+        if walkThread then task.cancel(walkThread) end
+        if currentTween then currentTween:Cancel() end
+        float.Parent = nil
+        applyAntiDeath(false)
+        humanoid.WalkSpeed = 16
+        status.Text = "Status: Idle"
+        button.Text = "▶ START TWEEN TO BASE"
+        button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end
 end)
 
--- Shortcut key 'T' untuk toggle tween to base (sesuai script kamu)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.KeyCode == Enum.KeyCode.T then
-		button:Activate()
-	end
+-- Keybinds
+local keyConnT = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.T then
+        button:Activate()
+    elseif input.KeyCode == Enum.KeyCode.K then
+        toggleSpeedCoilEquip()
+    end
 end)
 
--- Shortcut key 'K' untuk toggle equip/unequip Speed Coil -- ADDED
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.KeyCode == Enum.KeyCode.K then
-		toggleSpeedCoilEquip()
-	end
-end)
-
-return function()
-    active = false
+-- Simpan cleanup function
+getgenv().TweenToBaseCleanup = function()
+    if keyConnT then keyConnT:Disconnect() end
+    if healthConn then healthConn:Disconnect() end
     if walkThread then task.cancel(walkThread) end
     if currentTween then currentTween:Cancel() end
     float.Parent = nil
-    applyAntiDeath(false)
-    humanoid.WalkSpeed = 16
     if gui then gui:Destroy() end
-    print("[TweenToBase] Cleanup done")
+    getgenv().TweenToBaseCleanup = nil
 end
+
+end)()
