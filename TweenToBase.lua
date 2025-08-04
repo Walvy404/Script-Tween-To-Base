@@ -251,3 +251,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		toggleSpeedCoilEquip()
 	end
 end)
+
+return function()
+    active = false
+    if walkThread then task.cancel(walkThread) end
+    if currentTween then currentTween:Cancel() end
+    float.Parent = nil
+    applyAntiDeath(false)
+    humanoid.WalkSpeed = 16
+    if gui then gui:Destroy() end
+    print("[TweenToBase] Cleanup done")
+end
