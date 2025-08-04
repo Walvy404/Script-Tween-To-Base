@@ -1,20 +1,54 @@
--- 🧠 WALVY: Tween To Base (WindUI Integration)
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local PathfindingService = game:GetService("PathfindingService")
 local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
-local tweenSpeed = 80
+-- GUI
+local guiName = "TweenToBaseGUI_Walvy"
+local oldGui = CoreGui:FindFirstChild(guiName)
+if oldGui then oldGui:Destroy() end
+
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = guiName
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0, 300, 0, 200)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Size = UDim2.new(1, 0, 0, 40)
+toggleBtn.Position = UDim2.new(0, 0, 0, 0)
+toggleBtn.Text = "Start Tween"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1, 0, 0, 30)
+status.Position = UDim2.new(0, 0, 0, 45)
+status.Text = "Status: Idle"
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.new(1, 1, 1)
+status.Font = Enum.Font.Gotham
+status.TextSize = 14
+
+-- Setup
 local float = Instance.new("BodyVelocity")
 float.MaxForce = Vector3.new(1e6, 1e6, 1e6)
 float.Velocity = Vector3.new(0, 0, 0)
 
--- Helper
 local function buyItem(itemID)
     pcall(function()
         game:GetService("ReplicatedStorage"):WaitForChild("Packages")
@@ -42,7 +76,6 @@ local function buyAndEquipSpeedCoil()
     toggleSpeedCoilEquip()
 end
 
--- Respawn reconnect
 player.CharacterAdded:Connect(function(c)
 	character = c
 	hrp = c:WaitForChild("HumanoidRootPart")
@@ -75,6 +108,7 @@ local function applyAntiDeath(state)
 	end
 end
 
+local tweenSpeed = 80
 local active = false
 local currentTween
 local walkThread
@@ -124,33 +158,12 @@ local function walkToBase()
 	end
 end
 
--- Shortcut keys
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.KeyCode == Enum.KeyCode.T then
-		active = not active
-		if active then
-			buyAndEquipSpeedCoil()
-			applyAntiDeath(true)
-			humanoid.WalkSpeed = 0
-			float.Parent = hrp
-			walkThread = task.spawn(walkToBase)
-		else
-			if walkThread then task.cancel(walkThread) end
-			if currentTween then currentTween:Cancel() end
-			float.Parent = nil
-			applyAntiDeath(false)
-			humanoid.WalkSpeed = 16
-		end
-	end
-	if input.KeyCode == Enum.KeyCode.K then
-		toggleSpeedCoilEquip()
-	end
-end)
-
--- MAIN TOGGLE FUNCTION FOR WINDUI
-return function(state)
+-- START / STOP FUNCTION
+local function toggleTween(state)
 	active = state
+	toggleBtn.Text = active and "Stop Tween" or "Start Tween"
+	status.Text = active and "Status: Running" or "Status: Idle"
+
 	if active then
 		buyAndEquipSpeedCoil()
 		applyAntiDeath(true)
@@ -164,4 +177,24 @@ return function(state)
 		applyAntiDeath(false)
 		humanoid.WalkSpeed = 16
 	end
+end
+
+-- BUTTON CLICK
+toggleBtn.MouseButton1Click:Connect(function()
+	toggleTween(not active)
+end)
+
+-- SHORTCUT KEY
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.KeyCode == Enum.KeyCode.T then
+		toggleTween(not active)
+	elseif input.KeyCode == Enum.KeyCode.K then
+		toggleSpeedCoilEquip()
+	end
+end)
+
+-- MAIN WINDUI TOGGLE CALLBACK
+return function(state)
+	toggleTween(state)
 end
