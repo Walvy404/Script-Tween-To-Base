@@ -253,3 +253,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		toggleSpeedCoilEquip()
 	end
 end)
+end
