@@ -1,0 +1,158 @@
+saya ingin otomatis berhenti ketika sudah sampai base
+-- WALVY COMMUNITY - VELOCITY TO BASE (Burst + Auto Stop, Keep on Ground)
+-- Safe Horizontal Velocity Only - No Anti Death
+
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+
+player.CharacterAdded:Connect(function(c)
+character = c
+hrp = character:WaitForChild("HumanoidRootPart")
+humanoid = character:WaitForChild("Humanoid")
+end)
+
+-- Settings
+local BASE_SPEED = 40
+local BURST_SPEED = 90 -- dorongan awal
+local STOP_DISTANCE = 5
+local BURST_TIME = 0.25 -- detik dorongan
+
+local active = false
+local burstEndTime = 0
+
+-- GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "WalvyVelocityGui"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 240, 0, 130)
+frame.Position = UDim2.new(0.5, -120, 0.5, -65)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "WALVY COMMUNITY"
+title.Size = UDim2.new(1, 0, 0, 20)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+local button = Instance.new("TextButton", frame)
+button.Text = "▶ START VELOCITY TO BASE"
+button.Size = UDim2.new(0.8, 0, 0, 40)
+button.Position = UDim2.new(0.1, 0, 0.25, 0)
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 16
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+
+local status = Instance.new("TextLabel", frame)
+status.Text = "Status: Idle"
+status.Size = UDim2.new(1, 0, 0, 30)
+status.Position = UDim2.new(0, 0, 0.7, 0)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.Font = Enum.Font.Gotham
+status.TextSize = 14
+
+-- Drag GUI
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = frame.Position
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then dragging = false end
+end)
+end
+end)
+frame.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+dragInput = input
+end
+end)
+UserInputService.InputChanged:Connect(function(input)
+if dragging and input == dragInput then
+local delta = input.Position - dragStart
+frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+end)
+
+-- Get Base Position
+local function getBasePosition()
+local plots = workspace:FindFirstChild("Plots")
+if not plots then return nil end
+for _, plot in ipairs(plots:GetChildren()) do
+local sign = plot:FindFirstChild("PlotSign")
+local base = plot:FindFirstChild("DeliveryHitbox")
+if sign and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled and base then
+return base.Position
+end
+end
+return nil
+end
+
+local function isAtBase(basePos)
+return basePos and (hrp.Position - basePos).Magnitude <= STOP_DISTANCE
+end
+
+-- Movement Loop
+RunService.Heartbeat:Connect(function()
+if active then
+local target = getBasePosition()
+if not target then
+status.Text = "❌ Base Not Found"
+active = false
+return
+end
+if isAtBase(target) then
+active = false
+hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+status.Text = "✅ Arrived at Base"
+button.Text = "▶ START VELOCITY TO BASE"
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+return
+end
+
+local direction = (Vector3.new(target.X, hrp.Position.Y, target.Z) - hrp.Position).Unit
+local speed = (tick() < burstEndTime) and BURST_SPEED or BASE_SPEED
+hrp.AssemblyLinearVelocity = Vector3.new(direction.X * speed, -1, direction.Z * speed) -- -1 menjaga di tanah
+end
+
+end)
+
+-- Button Logic
+button.MouseButton1Click:Connect(function()
+if not active then
+local target = getBasePosition()
+if not target then
+status.Text = "❌ Base Not Found"
+return
+end
+active = true
+burstEndTime = tick() + BURST_TIME
+status.Text = "Moving to Base..."
+button.Text = "Walking..."
+button.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+else
+active = false
+hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+status.Text = "Status: Idle"
+button.Text = "▶ START VELOCITY TO BASE"
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+end
+end)
+
